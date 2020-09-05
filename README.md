@@ -2,4 +2,4 @@
 
 ## Description
 
-This is the practice repl, following the contents in [Writing An Interpreter In Go](https://interpreterbook.com/)
+This is a practice for writing interpreter in go, following the contents in [Writing An Interpreter In Go](https://interpreterbook.com/).
