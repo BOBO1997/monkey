@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/BOBO1997/monkey/ast"
 	"github.com/BOBO1997/monkey/lexer"
@@ -10,20 +11,36 @@ import (
 
 // Parser is a struct for parsing whole program
 type Parser struct {
-	l *lexer.Lexer
+	l      *lexer.Lexer
+	errors []string
 
 	curToken  token.Token
 	peekToken token.Token
 
-	errors []string
+	prefixParseFns map[token.TokenType]prefixParseFn
+	infixParseFns  map[token.TokenType]infixParseFn
 }
 
-// New function
+type (
+	prefixParseFn func() ast.Expression               // prefix parse function
+	infixParseFn  func(ast.Expression) ast.Expression // infix parse function
+)
+
+// New function creates a parser from lexer of whole program
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
 		l:      l,
 		errors: []string{},
 	}
+
+	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.INT, p.parseIntegerLiteral)
+	p.registerPrefix(token.BANG, p.parsePrefixExpression)
+	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
+
+	p.infixParseFns = make(map[token.TokenType]infixParseFn)
+
 	p.nextToken() // go forward
 	p.nextToken() // go forward
 	return p
@@ -69,11 +86,11 @@ func (p *Parser) parseStatement() ast.Statement { // note: ast.Statement is an i
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 }
 
-// parseLetStatement method of Parser
+// parseLetStatement method of Parser struct parses a let statement
 // let statement is expected to be "let <identifier> = <expression>"
 func (p *Parser) parseLetStatement() *ast.LetStatement { // note: ast.LetStatement is a struct
 	stmt := &ast.LetStatement{Token: p.curToken}
@@ -92,7 +109,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement { // note: ast.LetStateme
 	return stmt
 }
 
-// parseReturnStatement method of Parser
+// parseReturnStatement method of Parser struct parses a return statement
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken()
@@ -103,6 +120,93 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	}
 	return stmt
 }
+
+/* ====== expression ====== */
+// parser functions for expression
+
+// priority depth of each operator
+const (
+	_           int = iota
+	LOWEST          // 0
+	EQUALS          // ==
+	LESSGREATER     // > or <
+	SUM             // +
+	PRODUCT         // *
+	PREFIX          // -X or !X
+	CALL            // myFunction(X)
+)
+
+// parseExpressionStatement method of Parser struct parses expression statement
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{}
+	stmt.Expression = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return stmt
+}
+
+// parseExpression method of Parser struct parses expression
+func (p *Parser) parseExpression(precedence int) ast.Expression { // ! precedence has not been used
+	prefix := p.prefixParseFns[p.curToken.Type] // prefix is a function, search "prefix" at first, prefix in this case means the first operand
+	if prefix == nil {                          // error : no such prefix
+		p.noParsingPrefixFnError(p.curToken.Type)
+		return nil
+	}
+	leftExp := prefix() // parseSomething(), including identifier, integer literal, prefix expression, ...
+	return leftExp
+}
+
+// registerPrefix method of Parser struct
+func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
+}
+
+// registerInfix method of Parser struct
+func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
+	p.infixParseFns[tokenType] = fn
+}
+
+// parseIdentifier method of Parser struct returns ast.Expression interface, which contains an identifier
+// identifier expression is expected to be "<identifier>;"
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+// parseIntegerLiteral method of Parser struct returns ast.Expression interface, which contains an integer literal
+// integer expression is expected to be "<integer literal>;"
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	literal := &ast.IntegerLiteral{Token: p.curToken}
+	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64) // change string to int
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	literal.Value = value // value is int
+	return literal
+}
+
+// parsePrefixExpression method of Prefix struct returns ast.Expression interface, which contains prefix operator
+// prefix expression is expected to be "<prefix operator> <expression>;"
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+	}
+	p.nextToken()
+	expression.Right = p.parseExpression(PREFIX) // recursive call of parseExpression
+	return expression
+}
+
+// noParsingPrefixFnError method of Parser struct stores an error message for no prefix error
+func (p *Parser) noParsingPrefixFnError(t token.TokenType) {
+	msg := fmt.Sprintf("no prefix parse function for %s found", t)
+	p.errors = append(p.errors, msg)
+}
+
+/* ====== assertion functions ====== */
 
 // peekTokenIs method of Parse, checking the type of current token
 func (p *Parser) curTokenIs(t token.TokenType) bool {

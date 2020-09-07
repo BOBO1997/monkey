@@ -143,6 +143,51 @@ func (i *Identifier) TokenLiteral() string {
 	return i.Token.Literal
 }
 
+// String method of Identifier struct
 func (i *Identifier) String() string {
 	return i.Value
+}
+
+// IntegerLiteral is a struct for token.Int
+type IntegerLiteral struct {
+	Token token.Token
+	Value int64
+}
+
+// expressionNode method of Indentifier struct
+func (il *IntegerLiteral) expressionNode() {}
+
+// TokenLiteral method of Identifier struct
+func (il *IntegerLiteral) TokenLiteral() string {
+	return il.Token.Literal
+}
+
+// String method of Identifier struct
+func (il *IntegerLiteral) String() string {
+	return il.Token.Literal
+}
+
+// PrefixExpression is a struct
+type PrefixExpression struct {
+	Token    token.Token
+	Operator string
+	Right    Expression
+}
+
+// expressionNode method of PrefixExpression struct
+func (pe *PrefixExpression) expressionNode() {}
+
+// TokenLiteral method of PrefixExpression struct
+func (pe *PrefixExpression) TokenLiteral() string {
+	return pe.Token.Literal
+}
+
+// String method of PrefixExpression struct
+func (pe *PrefixExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("(")
+	out.WriteString(pe.Operator)
+	out.WriteString(pe.Right.String())
+	out.WriteString(")")
+	return out.String()
 }
