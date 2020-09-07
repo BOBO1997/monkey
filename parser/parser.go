@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/BOBO1997/monkey/ast"
 	"github.com/BOBO1997/monkey/lexer"
 	"github.com/BOBO1997/monkey/token"
@@ -22,20 +24,27 @@ func New(l *lexer.Lexer) *Parser {
 		l:      l,
 		errors: []string{},
 	}
-	p.nextToken()
-	p.nextToken()
+	p.nextToken() // go forward
+	p.nextToken() // go forward
 	return p
 }
 
-// Errors method of Parser returns p.errors
+// Errors method of Parser returns errors field
 func (p *Parser) Errors() []string {
 	return p.errors
 }
 
 // nextToken method of Parser struct contains current token and next token by peeking
+// directly operates on curToken field and peekToken field
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
 	p.peekToken = p.l.NextToken()
+}
+
+// peekError method of Parser adds error message to errors field if token type is not correct
+func (p *Parser) peekError(t token.TokenType) {
+	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
+	p.errors = append(p.errors, msg)
 }
 
 // ParseProgram method of Parser struct parses whole program
@@ -57,12 +66,15 @@ func (p *Parser) parseStatement() ast.Statement { // note: ast.Statement is an i
 	switch p.curToken.Type {
 	case token.LET:
 		return p.parseLetStatement()
+	case token.RETURN:
+		return p.parseReturnStatement()
 	default:
 		return nil
 	}
 }
 
 // parseLetStatement method of Parser
+// let statement is expected to be "let <identifier> = <expression>"
 func (p *Parser) parseLetStatement() *ast.LetStatement { // note: ast.LetStatement is a struct
 	stmt := &ast.LetStatement{Token: p.curToken}
 	if !p.expectPeek(token.IDENT) {
@@ -73,7 +85,19 @@ func (p *Parser) parseLetStatement() *ast.LetStatement { // note: ast.LetStateme
 		return nil
 	}
 
-	// TODO
+	// TODO: expression
+	for !p.curTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return stmt
+}
+
+// parseReturnStatement method of Parser
+func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+	stmt := &ast.ReturnStatement{Token: p.curToken}
+	p.nextToken()
+
+	// TODO: expression
 	for !p.curTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
@@ -91,12 +115,14 @@ func (p *Parser) peekTokenIs(t token.TokenType) bool {
 }
 
 // expectPeek method of Parser
-// An assertion function of Parser, calling nextToken when the type of peeked token corresponds to what is expected.
+// An assertion function of Parser, calling nextToken when the type of peeked token corresponds to what is expected to come next.
 func (p *Parser) expectPeek(t token.TokenType) bool {
+	expect := true
 	if p.peekTokenIs(t) {
-		p.nextToken()
-		return true
+		p.nextToken() // go forward
 	} else {
-		return false
+		p.peekError(t)
+		expect = false
 	}
+	return expect
 }
