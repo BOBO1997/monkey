@@ -40,6 +40,16 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
+	p.registerInfix(token.PLUS, p.parseInfixExpression)
+	p.registerInfix(token.MINUS, p.parseInfixExpression)
+	p.registerInfix(token.SLASH, p.parseInfixExpression)
+	p.registerInfix(token.ASTERISK, p.parseInfixExpression)
+	p.registerInfix(token.EQ, p.parseInfixExpression)
+	p.registerInfix(token.NEQ, p.parseInfixExpression)
+	p.registerInfix(token.LT, p.parseInfixExpression)
+	p.registerInfix(token.GT, p.parseInfixExpression)
+	p.registerInfix(token.LEQ, p.parseInfixExpression)
+	p.registerInfix(token.GEQ, p.parseInfixExpression)
 
 	p.nextToken() // go forward
 	p.nextToken() // go forward
@@ -130,11 +140,24 @@ const (
 	LOWEST          // 0
 	EQUALS          // ==
 	LESSGREATER     // > or <
-	SUM             // +
-	PRODUCT         // *
+	SUM             // + or -
+	PRODUCT         // * or /
 	PREFIX          // -X or !X
 	CALL            // myFunction(X)
 )
+
+var precedences = map[token.TokenType]int{
+	token.EQ:       EQUALS,
+	token.NEQ:      EQUALS,
+	token.LT:       LESSGREATER,
+	token.GT:       LESSGREATER,
+	token.LEQ:      LESSGREATER,
+	token.GEQ:      LESSGREATER,
+	token.PLUS:     SUM,
+	token.MINUS:    SUM,
+	token.ASTERISK: PRODUCT,
+	token.SLASH:    PRODUCT,
+}
 
 // parseExpressionStatement method of Parser struct parses expression statement
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
@@ -148,14 +171,23 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 // parseExpression method of Parser struct parses expression
-func (p *Parser) parseExpression(precedence int) ast.Expression { // ! precedence has not been used
+func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type] // prefix is a function, search "prefix" at first, prefix in this case means the first operand
 	if prefix == nil {                          // error : no such prefix
 		p.noParsingPrefixFnError(p.curToken.Type)
 		return nil
 	}
 	leftExp := prefix() // parseSomething(), including identifier, integer literal, prefix expression, ...
-	return leftExp
+
+	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() { // if the right operand is stronger
+		infix := p.infixParseFns[p.peekToken.Type]
+		if infix == nil {
+			return leftExp // finish parsing, since infix operator is not found
+		}
+		p.nextToken()
+		leftExp = infix(leftExp) // leftExp + operator + rightExp
+	}
+	return leftExp // leftExp
 }
 
 // registerPrefix method of Parser struct
@@ -188,6 +220,8 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	return literal
 }
 
+// prefix
+
 // parsePrefixExpression method of Prefix struct returns ast.Expression interface, which contains prefix operator
 // prefix expression is expected to be "<prefix operator> <expression>;"
 func (p *Parser) parsePrefixExpression() ast.Expression {
@@ -204,6 +238,37 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 func (p *Parser) noParsingPrefixFnError(t token.TokenType) {
 	msg := fmt.Sprintf("no prefix parse function for %s found", t)
 	p.errors = append(p.errors, msg)
+}
+
+// infix
+
+// peekPrecedence method of Parser struct
+func (p *Parser) peekPrecedence() int {
+	if p, ok := precedences[p.peekToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
+// curPrecedence method of Parser struct
+func (p *Parser) curPrecedence() int {
+	if p, ok := precedences[p.curToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
+// parseInfixExprepssion method of Parser struct
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression { // ex) "5 + 10", left is 5, curToken is +, and right is 5
+	expression := &ast.InfixExpression{ // already known
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Left:     left,
+	}
+	precedence := p.curPrecedence()
+	p.nextToken()
+	expression.Right = p.parseExpression(precedence) // recursive call
+	return expression
 }
 
 /* ====== assertion functions ====== */

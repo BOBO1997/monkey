@@ -191,3 +191,30 @@ func (pe *PrefixExpression) String() string {
 	out.WriteString(")")
 	return out.String()
 }
+
+// InfixExpression is a struct
+type InfixExpression struct {
+	Token    token.Token
+	Left     Expression
+	Operator string
+	Right    Expression
+}
+
+// expressionNode method of InfixExpression struct
+func (ie *InfixExpression) expressionNode() {}
+
+// TokenLiteral method of InfixExpression struct
+func (ie *InfixExpression) TokenLiteral() string {
+	return ie.Token.Literal
+}
+
+// String method of InfixExpression struct
+func (ie *InfixExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("(")
+	out.WriteString(ie.Left.String())
+	out.WriteString(ie.Operator)
+	out.WriteString(ie.Right.String())
+	out.WriteString(")")
+	return out.String()
+}
