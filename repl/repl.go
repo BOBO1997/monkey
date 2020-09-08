@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/BOBO1997/monkey/evaluator"
+
 	"github.com/BOBO1997/monkey/lexer"
 	"github.com/BOBO1997/monkey/parser"
 )
@@ -40,8 +42,16 @@ func Start(in io.Reader, out io.Writer) {
 				fmt.Printf("%+v\n", tok)
 			}
 		*/
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
+		// parser output
+		/*
+			io.WriteString(out, program.String())
+			io.WriteString(out, "\n")
+		*/
+		evaluated := evaluator.Eval(program)
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
+		}
 	}
 }
 
