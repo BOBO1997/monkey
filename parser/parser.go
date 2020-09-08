@@ -38,6 +38,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
+	p.registerPrefix(token.TRUE, p.parseBoolean)
+	p.registerPrefix(token.FALSE, p.parseBoolean)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -161,6 +163,7 @@ var precedences = map[token.TokenType]int{
 
 // parseExpressionStatement method of Parser struct parses expression statement
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	defer untrace(trace("parseExoressionStatement"))
 	stmt := &ast.ExpressionStatement{}
 	stmt.Expression = p.parseExpression(LOWEST)
 
@@ -172,6 +175,7 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 
 // parseExpression method of Parser struct parses expression
 func (p *Parser) parseExpression(precedence int) ast.Expression {
+	defer untrace(trace("parseExoression"))
 	prefix := p.prefixParseFns[p.curToken.Type] // prefix is a function, search "prefix" at first, prefix in this case means the first operand
 	if prefix == nil {                          // error : no such prefix
 		p.noParsingPrefixFnError(p.curToken.Type)
@@ -179,7 +183,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExp := prefix() // parseSomething(), including identifier, integer literal, prefix expression, ...
 
-	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() { // if the right operand is stronger
+	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() { // if the right operand is stronger: then return combined infix expression
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp // finish parsing, since infix operator is not found
@@ -188,16 +192,6 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		leftExp = infix(leftExp) // leftExp + operator + rightExp
 	}
 	return leftExp // leftExp
-}
-
-// registerPrefix method of Parser struct
-func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
-	p.prefixParseFns[tokenType] = fn
-}
-
-// registerInfix method of Parser struct
-func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
-	p.infixParseFns[tokenType] = fn
 }
 
 // parseIdentifier method of Parser struct returns ast.Expression interface, which contains an identifier
@@ -209,6 +203,7 @@ func (p *Parser) parseIdentifier() ast.Expression {
 // parseIntegerLiteral method of Parser struct returns ast.Expression interface, which contains an integer literal
 // integer expression is expected to be "<integer literal>;"
 func (p *Parser) parseIntegerLiteral() ast.Expression {
+	defer untrace(trace("parseIntegerLiteral"))
 	literal := &ast.IntegerLiteral{Token: p.curToken}
 	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64) // change string to int
 	if err != nil {
@@ -222,9 +217,15 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 
 // prefix
 
+// registerPrefix method of Parser struct
+func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
+}
+
 // parsePrefixExpression method of Prefix struct returns ast.Expression interface, which contains prefix operator
 // prefix expression is expected to be "<prefix operator> <expression>;"
 func (p *Parser) parsePrefixExpression() ast.Expression {
+	defer untrace(trace("parsePrefixExoression"))
 	expression := &ast.PrefixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
@@ -240,7 +241,20 @@ func (p *Parser) noParsingPrefixFnError(t token.TokenType) {
 	p.errors = append(p.errors, msg)
 }
 
+// parseBoolean method of Parser struct
+func (p *Parser) parseBoolean() ast.Expression {
+	return &ast.Boolean{
+		Token: p.curToken,
+		Value: p.curTokenIs(token.TRUE),
+	}
+}
+
 // infix
+
+// registerInfix method of Parser struct
+func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
+	p.infixParseFns[tokenType] = fn
+}
 
 // peekPrecedence method of Parser struct
 func (p *Parser) peekPrecedence() int {
@@ -260,6 +274,7 @@ func (p *Parser) curPrecedence() int {
 
 // parseInfixExprepssion method of Parser struct
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression { // ex) "5 + 10", left is 5, curToken is +, and right is 5
+	defer untrace(trace("parseInfixExoression"))
 	expression := &ast.InfixExpression{ // already known
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
