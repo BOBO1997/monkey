@@ -47,6 +47,7 @@ const (
 	TRUE     = "TRUE"
 	FALSE    = "FALSE"
 	IF       = "IF"
+	THEN     = "THEN"
 	ELSE     = "ELSE"
 	RETURN   = "RETURN"
 	FOR      = "FOR"
@@ -59,6 +60,7 @@ var keywords = map[string]TokenType{
 	"true":   TRUE,
 	"false":  FALSE,
 	"if":     IF,
+	"then":   THEN,
 	"else":   ELSE,
 	"return": RETURN,
 	"for":    FOR,

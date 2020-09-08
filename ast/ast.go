@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/BOBO1997/monkey/token"
 )
@@ -124,7 +125,7 @@ func (es *ExpressionStatement) TokenLiteral() string {
 // String method of Expressiontatement struct
 func (es *ExpressionStatement) String() string {
 	if es.Expression != nil {
-		return es.Expression.String()
+		return es.Expression.String() + ";"
 	}
 	return ""
 }
@@ -233,6 +234,122 @@ func (b *Boolean) TokenLiteral() string {
 	return b.Token.Literal
 }
 
+// String method of Boolean struct
 func (b *Boolean) String() string {
 	return b.Token.Literal
+}
+
+// IfExpression is a struct
+type IfExpression struct {
+	Token       token.Token
+	Condition   Expression
+	Consequence *BlockStatement
+	Alternative *BlockStatement
+}
+
+// expressionNode method of IfExpression struct
+func (ife *IfExpression) expressionNode() {}
+
+// TokenLiteral method of IfExpression struct
+func (ife *IfExpression) TokenLiteral() string {
+	return ife.Token.Literal
+}
+
+// String method of IfExpression struct
+func (ife *IfExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("if")
+	out.WriteString(ife.Condition.String())
+	//out.WriteString(" then ")
+	out.WriteString(" ")
+	out.WriteString(ife.Consequence.String())
+	if ife.Alternative != nil {
+		out.WriteString("else ")
+		out.WriteString(ife.Alternative.String())
+	}
+	return out.String()
+}
+
+// BlockStatement is a struct
+type BlockStatement struct {
+	Token      token.Token
+	Statements []Statement
+}
+
+// expressionNode method of BlockStatement struct
+func (bs *BlockStatement) expressionNode() {}
+
+// TokenLiteral method of BlockStatement struct
+func (bs *BlockStatement) TokenLiteral() string {
+	return bs.Token.Literal
+}
+
+// String method of BlockStatement struct
+func (bs *BlockStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString("{")
+	for _, s := range bs.Statements {
+		out.WriteString(s.String())
+	}
+	out.WriteString("}")
+	return out.String()
+}
+
+// FunctionLiteral is a struct
+type FunctionLiteral struct {
+	Token      token.Token
+	Parameters []*Identifier
+	Body       *BlockStatement
+}
+
+// expressionNode method of FunctionLiteral struct
+func (fl *FunctionLiteral) expressionNode() {}
+
+// TokenLiteral method of FunctionLiteral struct
+func (fl *FunctionLiteral) TokenLiteral() string {
+	return fl.Token.Literal
+}
+
+// String method of FunctionLiteral struct
+func (fl *FunctionLiteral) String() string {
+	var out bytes.Buffer
+	params := []string{}
+	for _, p := range fl.Parameters {
+		params = append(params, p.String())
+	}
+	out.WriteString(fl.TokenLiteral())
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(")")
+	out.WriteString(fl.Body.String())
+	return out.String()
+}
+
+// CallExpression is a struct
+type CallExpression struct {
+	Token     token.Token
+	Function  Expression
+	Arguments []Expression
+}
+
+// expressionNode method of CallExpression struct
+func (ce *CallExpression) expressionNode() {}
+
+// TokenLiteral method of CallExpression struct
+func (ce *CallExpression) TokenLiteral() string {
+	return ce.Token.Literal
+}
+
+// String method of CallExpression struct
+func (ce *CallExpression) String() string {
+	var out bytes.Buffer
+	args := []string{}
+	for _, arg := range ce.Arguments {
+		args = append(args, arg.String())
+	}
+	out.WriteString(ce.Function.String())
+	out.WriteString("(")
+	out.WriteString(strings.Join(args, ","))
+	out.WriteString(")")
+	return out.String()
 }
