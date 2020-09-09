@@ -222,7 +222,7 @@ func TestErrorHandling(t *testing.T) {
 		},
 		{
 			"true + false + true + false;",
-			"unknown operator: BOOLEAN + BOOLEAN",
+			"type mismatch: ERROR + BOOLEAN",
 		},
 		{
 			"5; true + false; 5",
@@ -234,14 +234,14 @@ func TestErrorHandling(t *testing.T) {
 		},
 		{
 			`
-if (10 > 1) {
-  if (10 > 1) {
-    return true + false;
-  }
+			if (10 > 1) {
+			  if (10 > 1) {
+			    return true + false;
+			  }
 
-  return 1;
-}
-`,
+			  return 1;
+			}
+			`,
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
 		{
@@ -250,19 +250,33 @@ if (10 > 1) {
 		},
 	}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		evaluated := testEval(tt.input)
 
 		errObj, ok := evaluated.(*object.Error)
 		if !ok {
-			t.Errorf("no error object returned. got=%T(%+v)",
-				evaluated, evaluated)
+			t.Errorf("%d no error object returned. got=%T(%+v)", i, evaluated, evaluated)
 			continue
 		}
 
 		if errObj.Message != tt.expectedMessage {
-			t.Errorf("wrong error message. expected=%q, got=%q",
-				tt.expectedMessage, errObj.Message)
+			t.Errorf("wrong error message. expected=%q, got=%q", tt.expectedMessage, errObj.Message)
 		}
+	}
+}
+
+func TestLetStatements(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let a = 5; a;", 5},
+		{"let a = 5 * 5; a;", 25},
+		{"let a = 5; let b = a; b;", 5},
+		{"let a = 5; let b = a; let c = a + b + 5; c;", 15},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(tt.input), tt.expected)
 	}
 }
