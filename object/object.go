@@ -12,6 +12,7 @@ const (
 	BOOLEAN_OBJ      = "BOOLEAN"
 	NULL_OBJ         = "NULL"
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
+	ERROR_OBJ        = "ERROR"
 )
 
 /* ====== object definitions ====== */
@@ -84,4 +85,19 @@ func (rv *ReturnValue) Inspect() string {
 // Type method of ReturnValue struct
 func (rv *ReturnValue) Type() ObjectType {
 	return RETURN_VALUE_OBJ
+}
+
+// Error struct
+type Error struct {
+	Message string
+}
+
+// Inspect method of Error struct
+func (err *Error) Inspect() string {
+	return "ERROR: " + err.Message
+}
+
+// Type method of Error struct
+func (err *Error) Type() ObjectType {
+	return ERROR_OBJ
 }
