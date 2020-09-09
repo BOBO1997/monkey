@@ -8,9 +8,10 @@ import (
 type ObjectType string
 
 const (
-	INTEGER_OBJ = "INTEGER"
-	BOOLEAN_OBJ = "BOOLEAN"
-	NULL_OBJ    = "NULL"
+	INTEGER_OBJ      = "INTEGER"
+	BOOLEAN_OBJ      = "BOOLEAN"
+	NULL_OBJ         = "NULL"
+	RETURN_VALUE_OBJ = "RETURN_VALUE"
 )
 
 /* ====== object definitions ====== */
@@ -60,12 +61,27 @@ func (b *Boolean) Type() ObjectType {
 // Null struct
 type Null struct{}
 
-// Inspect method of Boolean struct
+// Inspect method of Null struct
 func (n *Null) Inspect() string {
 	return fmt.Sprintf("null")
 }
 
-// Type method of Boolean struct
+// Type method of Null struct
 func (n *Null) Type() ObjectType {
 	return NULL_OBJ
+}
+
+// ReturnValue struct
+type ReturnValue struct {
+	Value Object
+}
+
+// Inspect method of ReturnValue struct
+func (rv *ReturnValue) Inspect() string {
+	return rv.Value.Inspect()
+}
+
+// Type method of ReturnValue struct
+func (rv *ReturnValue) Type() ObjectType {
+	return RETURN_VALUE_OBJ
 }
