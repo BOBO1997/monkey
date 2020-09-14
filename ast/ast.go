@@ -125,7 +125,7 @@ func (es *ExpressionStatement) TokenLiteral() string {
 // String method of Expressiontatement struct
 func (es *ExpressionStatement) String() string {
 	if es.Expression != nil {
-		return es.Expression.String() + ";"
+		return es.Expression.String() // + ";"
 	}
 	return ""
 }
@@ -287,11 +287,11 @@ func (bs *BlockStatement) TokenLiteral() string {
 // String method of BlockStatement struct
 func (bs *BlockStatement) String() string {
 	var out bytes.Buffer
-	out.WriteString("{")
+	//out.WriteString("{")
 	for _, s := range bs.Statements {
 		out.WriteString(s.String())
 	}
-	out.WriteString("}")
+	//out.WriteString("}")
 	return out.String()
 }
 

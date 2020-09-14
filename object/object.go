@@ -1,7 +1,11 @@
 package object
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
+
+	"github.com/BOBO1997/monkey/ast"
 )
 
 // ObjectType type represents type of Object
@@ -13,6 +17,7 @@ const (
 	NULL_OBJ         = "NULL"
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
 	ERROR_OBJ        = "ERROR"
+	FUNCTION_OBJ     = "FUNCTION"
 )
 
 /* ====== object definitions ====== */
@@ -100,4 +105,31 @@ func (err *Error) Inspect() string {
 // Type method of Error struct
 func (err *Error) Type() ObjectType {
 	return ERROR_OBJ
+}
+
+// Function struct
+type Function struct {
+	Parameters []*ast.Identifier
+	Body       *ast.BlockStatement
+	Env        *Environment
+}
+
+// Inspect method of Function struct
+func (f *Function) Inspect() string {
+	var out bytes.Buffer
+	params := []string{}
+	for _, p := range f.Parameters {
+		params = append(params, p.Value)
+	}
+	out.WriteString("fn(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") {\n")
+	out.WriteString(f.Body.String())
+	out.WriteString("\n}")
+	return out.String()
+}
+
+// Type method of Function struct
+func (f *Function) Type() ObjectType {
+	return FUNCTION_OBJ
 }
