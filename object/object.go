@@ -11,6 +11,7 @@ import (
 // ObjectType type represents type of Object
 type ObjectType string
 
+// object name
 const (
 	INTEGER_OBJ      = "INTEGER"
 	BOOLEAN_OBJ      = "BOOLEAN"
@@ -18,6 +19,8 @@ const (
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
 	ERROR_OBJ        = "ERROR"
 	FUNCTION_OBJ     = "FUNCTION"
+	STRING_OBJ       = "STRING"
+	BUILTIN_OBJ      = "BUILTIN"
 )
 
 /* ====== object definitions ====== */
@@ -60,6 +63,23 @@ func (b *Boolean) Inspect() string {
 // Type method of Boolean struct
 func (b *Boolean) Type() ObjectType {
 	return BOOLEAN_OBJ
+}
+
+// string
+
+// String struct
+type String struct {
+	Value string
+}
+
+// Inspect method of String struct
+func (s *String) Inspect() string {
+	return s.Value
+}
+
+// Type method of String struct
+func (s *String) Type() ObjectType {
+	return STRING_OBJ
 }
 
 // null
@@ -132,4 +152,24 @@ func (f *Function) Inspect() string {
 // Type method of Function struct
 func (f *Function) Type() ObjectType {
 	return FUNCTION_OBJ
+}
+
+// builtin function
+
+// BuiltinFunction type
+type BuiltinFunction func(args ...Object) Object
+
+// Builtin struct
+type Builtin struct {
+	Fn BuiltinFunction
+}
+
+// Inspect method of String struct
+func (b *Builtin) Inspect() string {
+	return "builtin function"
+}
+
+// Type method of String struct
+func (b *Builtin) Type() ObjectType {
+	return BUILTIN_OBJ
 }

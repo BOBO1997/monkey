@@ -51,6 +51,8 @@ const (
 	ELSE     = "ELSE"
 	RETURN   = "RETURN"
 	FOR      = "FOR"
+
+	STRING = "STRING"
 )
 
 // token.keywords is a map which contains the reserved identifier

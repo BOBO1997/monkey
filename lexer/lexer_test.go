@@ -50,6 +50,8 @@ func TestNextToken2(t *testing.T) {
 		}
 		ten == five;
 		10 != 5;
+		"foobar"
+		"foo bar"
 	`
 	tests := []struct {
 		expectedType    token.TokenType
@@ -129,6 +131,8 @@ func TestNextToken2(t *testing.T) {
 		{token.INT, "5"},
 		//60
 		{token.SEMICOLON, ";"},
+		{token.STRING, "foobar"},
+		{token.STRING, "foo bar"},
 		{token.EOF, ""},
 	}
 

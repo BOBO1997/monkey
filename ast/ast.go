@@ -155,17 +155,36 @@ type IntegerLiteral struct {
 	Value int64
 }
 
-// expressionNode method of Indentifier struct
+// expressionNode method of IntegerLiteral struct
 func (il *IntegerLiteral) expressionNode() {}
 
-// TokenLiteral method of Identifier struct
+// TokenLiteral method of IntegerLiteral struct
 func (il *IntegerLiteral) TokenLiteral() string {
 	return il.Token.Literal
 }
 
-// String method of Identifier struct
+// String method of IntegerLiteral struct
 func (il *IntegerLiteral) String() string {
 	return il.Token.Literal
+}
+
+// StringLiteral is a struct for token.String
+type StringLiteral struct {
+	Token token.Token
+	Value string
+}
+
+// expressionNode method of StringLiteral struct
+func (sl *StringLiteral) expressionNode() {}
+
+// TokenLiteral method of StringLiteral struct
+func (sl *StringLiteral) TokenLiteral() string {
+	return sl.Token.Literal
+}
+
+// String method of StringLiteral struct
+func (sl *StringLiteral) String() string {
+	return sl.Token.Literal
 }
 
 // PrefixExpression is a struct

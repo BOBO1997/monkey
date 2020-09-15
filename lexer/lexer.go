@@ -50,6 +50,18 @@ func (l *Lexer) readNumber() string {
 	return l.input[startPos:l.position]
 }
 
+// readString method reads forward the source code and return a string
+func (l *Lexer) readString() string {
+	startPos := l.position + 1
+	for {
+		l.readChar()
+		if l.ch == '"' || l.ch == 0 {
+			break
+		}
+	}
+	return l.input[startPos:l.position]
+}
+
 // peekChar method peeks the next rune, for finding the operator with two rune
 func (l *Lexer) peekChar() rune {
 	if len([]rune(l.input)) <= l.readPosition {
@@ -126,6 +138,9 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LBRACE, l.ch)
 	case '}':
 		tok = newToken(token.RBRACE, l.ch)
+	case '"':
+		tok.Type = token.STRING
+		tok.Literal = l.readString()
 	case 0:
 		tok.Literal = ""
 		tok.Type = "EOF"
