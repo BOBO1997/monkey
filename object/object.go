@@ -24,6 +24,7 @@ const (
 	BUILTIN_OBJ      = "BUILTIN"
 	ARRAY_OBJ        = "ARRAY"
 	HASH_OBJ         = "HASH"
+	QUOTE_OBJ        = "QUOTE"
 )
 
 /* ====== object definitions ====== */
@@ -270,4 +271,19 @@ func (h *Hash) Inspect() string {
 	out.WriteString(strings.Join(pairs, ", "))
 	out.WriteString("}")
 	return out.String()
+}
+
+// Quote struct
+type Quote struct {
+	Node ast.Node
+}
+
+// Type method of Quote struct
+func (q *Quote) Type() ObjectType {
+	return QUOTE_OBJ
+}
+
+// Inspect method of Quote struct
+func (q *Quote) Inspect() string {
+	return "QUOTE(" + q.Node.String() + ")"
 }

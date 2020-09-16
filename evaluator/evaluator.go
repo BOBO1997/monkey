@@ -16,6 +16,7 @@ var (
 // BaseEnv is the base environment of repl
 var BaseEnv *object.Environment
 
+// builtins defines the builtin functions
 var builtins = map[string]*object.Builtin{
 	"len": &object.Builtin{
 		Fn: func(args ...object.Object) object.Object {
@@ -195,7 +196,21 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		params := node.Parameters // raw ast
 		body := node.Body         // raw ast
 		return &object.Function{Parameters: params, Body: body, Env: env}
-	case *ast.CallExpression: // this can handle recursive function because the defined function is already in base env and the Parameters field and Body field of object.Function are hold by ast
+	case *ast.CallExpression:
+		/*
+			This can handle recursive function
+				because the defined function is already in base env (<- since env is pointer, and be kept updated)
+					and the Parameters field and Body field of object.Function are hold by ast
+
+			For example, the next code holds:
+			>> let f = fn(x) { if (x > 0) { puts(x); g(x-1); } else { puts(x); }; };
+			>> let g = fn(x) { if (x > 0) { puts(x); f(x-1); } else { puts(x); }; };
+
+			However, mutual recurrence should be defined by a new syntax.
+		*/
+		if node.Function.TokenLiteral() == "quote" {
+			return quote(node.Arguments[0])
+		}
 		function := Eval(node.Function, env)
 		if isError(function) {
 			return function
