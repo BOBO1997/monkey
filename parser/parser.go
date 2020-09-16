@@ -44,6 +44,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.IF, p.parseIfExpression)
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
+	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -57,6 +58,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.LEQ, p.parseInfixExpression)
 	p.registerInfix(token.GEQ, p.parseInfixExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
+	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 
 	p.nextToken() // go forward
 	p.nextToken() // go forward
@@ -175,6 +177,7 @@ const (
 	PRODUCT         // * or /
 	PREFIX          // -X or !X
 	CALL            // myFunction(X)
+	INDEX           // array[index]
 )
 
 var precedences = map[token.TokenType]int{
@@ -189,6 +192,7 @@ var precedences = map[token.TokenType]int{
 	token.ASTERISK: PRODUCT,
 	token.SLASH:    PRODUCT,
 	token.LPAREN:   CALL,
+	token.LBRACKET: INDEX,
 }
 
 // parseExpressionStatement method of Parser struct parses expression statement
@@ -284,6 +288,34 @@ func (p *Parser) parseStringLiteral() ast.Expression {
 	return &ast.StringLiteral{
 		Token: p.curToken,
 		Value: p.curToken.Literal,
+	}
+}
+
+// parseExpressionList method of Parser struct
+func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
+	list := []ast.Expression{}
+	if p.peekTokenIs(end) {
+		p.nextToken()
+		return list
+	}
+	p.nextToken()
+	list = append(list, p.parseExpression(LOWEST))
+	for p.peekTokenIs(token.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		list = append(list, p.parseExpression(LOWEST))
+	}
+	if !p.expectPeek(end) {
+		return nil
+	}
+	return list
+}
+
+// parseArrayLiteral method of Parser struct
+func (p *Parser) parseArrayLiteral() ast.Expression {
+	return &ast.ArrayLiteral{
+		Token:    p.curToken,
+		Elements: p.parseExpressionList(token.RBRACKET),
 	}
 }
 
@@ -428,10 +460,12 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 		Token:    p.curToken,
 		Function: function,
 	}
-	exp.Arguments = p.parseCallArguments()
+	// exp.Arguments = p.parseCallArguments()
+	exp.Arguments = p.parseExpressionList(token.RPAREN)
 	return exp
 }
 
+/*
 // parseCallArguments method of Parser struct
 func (p *Parser) parseCallArguments() []ast.Expression {
 	args := []ast.Expression{}
@@ -451,6 +485,21 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 		return nil
 	}
 	return args
+}
+*/
+
+// parseIndexExpression method of Parser struct
+func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
+	exp := &ast.IndexExpression{
+		Token: p.curToken,
+		Left:  left,
+	}
+	p.nextToken()
+	exp.Index = p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RBRACKET) {
+		return nil
+	}
+	return exp
 }
 
 /* ====== assertion functions ====== */

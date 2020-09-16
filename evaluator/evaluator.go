@@ -22,8 +22,96 @@ var builtins = map[string]*object.Builtin{
 			switch arg := args[0].(type) {
 			case *object.String:
 				return &object.Integer{Value: int64(len(arg.Value))}
+			case *object.Array:
+				return &object.Integer{Value: int64(len(arg.Elements))}
 			default:
 				return newError("argument to `len` not supported, got %s", args[0].Type())
+			}
+		},
+	},
+	"first": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("wrong number of arguments, got=%d, want=1", len(args))
+			}
+			switch arg := args[0].(type) {
+			case *object.String:
+				if len(arg.Value) > 0 {
+					return &object.String{Value: arg.Value[0:1]}
+				}
+				return NULL
+			case *object.Array:
+				if len(arg.Elements) > 0 {
+					return arg.Elements[0]
+				}
+				return NULL
+			default:
+				return newError("argument to `first` not supported, got %s", args[0].Type())
+			}
+		},
+	},
+	"last": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("wrong number of arguments, got=%d, want=1", len(args))
+			}
+			switch arg := args[0].(type) {
+			case *object.String:
+				length := len(arg.Value)
+				if length > 0 {
+					return &object.String{Value: arg.Value[length-1 : length]}
+				}
+				return NULL
+			case *object.Array:
+				length := len(arg.Elements)
+				if length > 0 {
+					return arg.Elements[length-1]
+				}
+				return NULL
+			default:
+				return newError("argument to `last` not supported, got %s", args[0].Type())
+			}
+		},
+	},
+	"rest": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("wrong number of arguments, got=%d, want=1", len(args))
+			}
+			switch arg := args[0].(type) {
+			case *object.String:
+				length := len(arg.Value)
+				if length > 0 {
+					return &object.String{Value: arg.Value[1:length]}
+				}
+				return NULL
+			case *object.Array:
+				length := len(arg.Elements)
+				if length > 0 {
+					rest := make([]object.Object, length-1, length-1)
+					copy(rest, arg.Elements[1:length])
+					return &object.Array{Elements: rest}
+				}
+				return NULL
+			default:
+				return newError("argument to `rest` not supported, got %s", args[0].Type())
+			}
+		},
+	},
+	"push": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("wrong number of arguments, got=%d, want=2", len(args))
+			}
+			switch arg := args[0].(type) {
+			case *object.Array:
+				length := len(arg.Elements)
+				newArr := make([]object.Object, length+1, length+1)
+				copy(newArr, arg.Elements)
+				newArr[length] = args[1]
+				return &object.Array{Elements: newArr}
+			default:
+				return newError("argument to `push` not supported, got %s", args[0].Type())
 			}
 		},
 	},
@@ -90,6 +178,22 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return args[0]
 		}
 		return applyFunction(function, args)
+	case *ast.ArrayLiteral:
+		elements := evalExpressions(node.Elements, env)
+		if len(elements) == 1 && isError(elements[0]) { // if error occur
+			return elements[0]
+		}
+		return &object.Array{Elements: elements}
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return index
+		}
+		return evalIndexExpression(left, index)
 	}
 
 	return nil
@@ -327,4 +431,23 @@ func unwrapReturnValues(obj object.Object) object.Object {
 		return returnValue.Value
 	}
 	return obj
+}
+
+func evalIndexExpression(left, index object.Object) object.Object {
+	switch {
+	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
+		return evalApplyIndexExpression(left, index)
+	default:
+		return newError("index operator not supported: %s", left.Type())
+	}
+}
+
+func evalApplyIndexExpression(array, index object.Object) object.Object {
+	arrayObject := array.(*object.Array)
+	idx := index.(*object.Integer).Value
+	max := int64(len(arrayObject.Elements) - 1)
+	if idx < 0 || max < idx {
+		return NULL
+	}
+	return arrayObject.Elements[idx]
 }

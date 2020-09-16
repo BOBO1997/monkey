@@ -187,6 +187,64 @@ func (sl *StringLiteral) String() string {
 	return sl.Token.Literal
 }
 
+// ArrayLiteral is a struct for token.Array
+type ArrayLiteral struct {
+	Token    token.Token
+	Elements []Expression
+}
+
+// expressionNode method of ArrayLiteral struct
+func (al *ArrayLiteral) expressionNode() {}
+
+// TokenLiteral method of ArrayLiteral struct
+func (al *ArrayLiteral) TokenLiteral() string {
+	return al.Token.Literal
+}
+
+// String method of ArrayLiteral struct
+func (al *ArrayLiteral) String() string {
+	var out bytes.Buffer
+	elements := []string{}
+	for _, element := range al.Elements {
+		elements = append(elements, element.String())
+	}
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("]")
+	return out.String()
+}
+
+// expressions
+
+// index expression
+
+// IndexExpression struct
+type IndexExpression struct {
+	Token token.Token
+	Left  Expression
+	Index Expression
+}
+
+// expressionNode method of IndexExpression struct
+func (ie *IndexExpression) expressionNode() {}
+
+// TokenLiteral method of IndexExpression struct
+func (ie *IndexExpression) TokenLiteral() string {
+	return ie.Token.Literal
+}
+
+// String method of IndexExpression struct
+func (ie *IndexExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString(ie.Left.String())
+	out.WriteString("[")
+	out.WriteString(ie.Index.String())
+	out.WriteString("]")
+	return out.String()
+}
+
+// prefix expression
+
 // PrefixExpression is a struct
 type PrefixExpression struct {
 	Token    token.Token
