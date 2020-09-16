@@ -13,6 +13,9 @@ var (
 	NULL  = &object.Null{}
 )
 
+// BaseEnv is the base environment of repl
+var BaseEnv *object.Environment
+
 var builtins = map[string]*object.Builtin{
 	"len": &object.Builtin{
 		Fn: func(args ...object.Object) object.Object {
@@ -115,6 +118,30 @@ var builtins = map[string]*object.Builtin{
 			}
 		},
 	},
+	"puts": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			for _, arg := range args {
+				fmt.Println(arg.Inspect())
+			}
+			return NULL
+		},
+	},
+	"__inspect_env__": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) > 1 {
+				return newError("wrong number of arguments, got=%d, want= 0 or 1", len(args))
+			}
+			if len(args) == 0 {
+				fmt.Println(object.InspectEnvironment(BaseEnv))
+			} else {
+				switch arg := args[0].(type) {
+				case *object.Function:
+					fmt.Println(object.InspectEnvironment(arg.Env))
+				}
+			}
+			return NULL
+		},
+	},
 }
 
 // Eval function
@@ -165,10 +192,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
 	case *ast.FunctionLiteral:
-		params := node.Parameters
-		body := node.Body
+		params := node.Parameters // raw ast
+		body := node.Body         // raw ast
 		return &object.Function{Parameters: params, Body: body, Env: env}
-	case *ast.CallExpression:
+	case *ast.CallExpression: // this can handle recursive function because the defined function is already in base env and the Parameters field and Body field of object.Function are hold by ast
 		function := Eval(node.Function, env)
 		if isError(function) {
 			return function
@@ -194,6 +221,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return index
 		}
 		return evalIndexExpression(left, index)
+	case *ast.HashLiteral:
+		return evalHashLiteral(node, env)
 	}
 
 	return nil
@@ -235,7 +264,7 @@ func evalStatements(stmts []ast.Statement, env *object.Environment) object.Objec
 	for _, stmt := range stmts {
 		result = Eval(stmt, env)
 
-		if returnValue, ok := result.(*object.ReturnValue); ok {
+		if returnValue, ok := result.(*object.ReturnValue); ok { // ok; type assersion should have error checking
 			return returnValue.Value
 		}
 	}
@@ -275,11 +304,12 @@ func evalBangOperatorExpression(right object.Object) object.Object {
 }
 
 // evalMinusOperatorExpression function
+// this function is only called when right is *object.Integer type
 func evalMinusOperatorExpression(right object.Object) object.Object {
-	if right.Type() != object.INTEGER_OBJ {
+	if right.Type() != object.INTEGER_OBJ { // ok; type assersion should have error checking
 		return newError("unknown operator: -%s", right.Type())
 	}
-	value := right.(*object.Integer).Value
+	value := right.(*object.Integer).Value // ok; type assersion should have error checking
 	return &object.Integer{Value: -value}
 }
 
@@ -306,19 +336,21 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 }
 
 // evalStringInfixExpression function
+// this function is only called when left and right are both *object.String type
 func evalStringInfixExpression(operator string, left, right object.Object) object.Object {
 	if operator != "+" {
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
-	leftVal := left.(*object.String).Value
-	rightVal := right.(*object.String).Value
+	leftVal := left.(*object.String).Value   // ok; type assersion should have error checking
+	rightVal := right.(*object.String).Value // ok; type assersion should have error checking
 	return &object.String{Value: leftVal + rightVal}
 }
 
 // evalIntegerInfixExpression function
+// this function is only called when left and right are both *object.Integer type
 func evalIntegerInfixExpression(operator string, left, right object.Object) object.Object {
-	leftVal := left.(*object.Integer).Value
-	rightVal := right.(*object.Integer).Value
+	leftVal := left.(*object.Integer).Value   // ok; type assersion should have error checking
+	rightVal := right.(*object.Integer).Value // ok; type assersion should have error checking
 	switch operator {
 	case "+":
 		return &object.Integer{Value: leftVal + rightVal}
@@ -427,27 +459,74 @@ func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Enviro
 }
 
 func unwrapReturnValues(obj object.Object) object.Object {
-	if returnValue, ok := obj.(*object.ReturnValue); ok {
+	if returnValue, ok := obj.(*object.ReturnValue); ok { // ok; type assersion should have error checking
 		return returnValue.Value
 	}
 	return obj
 }
 
+// evalIndexExpression function evaluates index access expression
+// index expression belongs to
 func evalIndexExpression(left, index object.Object) object.Object {
 	switch {
 	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
 		return evalApplyIndexExpression(left, index)
+	case left.Type() == object.HASH_OBJ:
+		return evalHashIndexExpression(left, index)
 	default:
 		return newError("index operator not supported: %s", left.Type())
 	}
 }
 
+// evalApplyIndexExpression function accesses the index-th element of the array
 func evalApplyIndexExpression(array, index object.Object) object.Object {
-	arrayObject := array.(*object.Array)
+	arrayObject, ok := array.(*object.Array) // ok; type assersion should have error checking
+	if !ok {
+		return newError("not Array: got=%s", array.Type())
+	}
 	idx := index.(*object.Integer).Value
 	max := int64(len(arrayObject.Elements) - 1)
 	if idx < 0 || max < idx {
 		return NULL
 	}
 	return arrayObject.Elements[idx]
+}
+
+// evalHashLiteral function makes a hash object, which contains a map from object to object
+func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Object {
+	pairs := make(map[object.HashKey]object.HashPair)
+	for keyExpr, itemExpr := range node.Pairs {
+		key := Eval(keyExpr, env)
+		if isError(key) {
+			return key
+		}
+		hashKey, ok := key.(object.Hashable) // ok; type assersion should have error checking
+		if !ok {
+			return newError("unusable as hash key: %s", key.Type())
+		}
+		item := Eval(itemExpr, env)
+		if isError(item) {
+			return item
+		}
+		hashed := hashKey.HashKey()
+		pairs[hashed] = object.HashPair{Key: key, Value: item}
+	}
+	return &object.Hash{Pairs: pairs}
+}
+
+// evalHashIndexExpression function
+func evalHashIndexExpression(left, index object.Object) object.Object {
+	hashObject, ok := left.(*object.Hash) // ok; type assersion should have error checking
+	if !ok {
+		return newError("not Hash: got=%s", left.Type())
+	}
+	key, ok := index.(object.Hashable) // ok; type assersion should have error checking
+	if !ok {
+		return newError("unusable as hash key: %s", index.Type())
+	}
+	pair, ok := hashObject.Pairs[key.HashKey()]
+	if !ok {
+		return NULL
+	}
+	return pair.Value
 }

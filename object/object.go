@@ -206,13 +206,18 @@ type HashKey struct {
 	Value uint64
 }
 
+// Hashable interface
+type Hashable interface {
+	HashKey() HashKey
+}
+
 // HashKey method of Boolean struct
 func (b *Boolean) HashKey() HashKey {
 	var value uint64
 	if b.Value {
-		value = 1
+		value = 1 // true
 	} else {
-		value = 0
+		value = 0 // false
 	}
 	return HashKey{
 		Type:  b.Type(),
@@ -224,7 +229,7 @@ func (b *Boolean) HashKey() HashKey {
 func (i *Integer) HashKey() HashKey {
 	return HashKey{
 		Type:  i.Type(),
-		Value: uint64(i.Value),
+		Value: uint64(i.Value), // value
 	}
 }
 
@@ -236,4 +241,33 @@ func (s *String) HashKey() HashKey {
 		Type:  s.Type(),
 		Value: h.Sum64(),
 	}
+}
+
+// HashPair struct
+type HashPair struct {
+	Key   Object
+	Value Object
+}
+
+// Hash struct
+type Hash struct {
+	Pairs map[HashKey]HashPair
+}
+
+// Type method of Hash struct
+func (h *Hash) Type() ObjectType {
+	return HASH_OBJ
+}
+
+// Inspect method of Hash struct
+func (h *Hash) Inspect() string {
+	var out bytes.Buffer
+	pairs := []string{}
+	for _, pair := range h.Pairs {
+		pairs = append(pairs, fmt.Sprintf("%s: %s", pair.Key.Inspect(), pair.Value.Inspect()))
+	}
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
+	return out.String()
 }
