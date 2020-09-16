@@ -3,6 +3,7 @@ package object
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/BOBO1997/monkey/ast"
@@ -22,6 +23,7 @@ const (
 	STRING_OBJ       = "STRING"
 	BUILTIN_OBJ      = "BUILTIN"
 	ARRAY_OBJ        = "ARRAY"
+	HASH_OBJ         = "HASH"
 )
 
 /* ====== object definitions ====== */
@@ -196,4 +198,42 @@ func (arr *Array) Inspect() string {
 // Type method of Array struct
 func (arr *Array) Type() ObjectType {
 	return ARRAY_OBJ
+}
+
+// HashKey struct
+type HashKey struct {
+	Type  ObjectType
+	Value uint64
+}
+
+// HashKey method of Boolean struct
+func (b *Boolean) HashKey() HashKey {
+	var value uint64
+	if b.Value {
+		value = 1
+	} else {
+		value = 0
+	}
+	return HashKey{
+		Type:  b.Type(),
+		Value: value,
+	}
+}
+
+// HashKey method of Integer struct
+func (i *Integer) HashKey() HashKey {
+	return HashKey{
+		Type:  i.Type(),
+		Value: uint64(i.Value),
+	}
+}
+
+// HashKey method of String struct
+func (s *String) HashKey() HashKey {
+	h := fnv.New64a()
+	h.Write([]byte(s.Value)) // ? not []rune
+	return HashKey{
+		Type:  s.Type(),
+		Value: h.Sum64(),
+	}
 }

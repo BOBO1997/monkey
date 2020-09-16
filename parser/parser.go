@@ -45,6 +45,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
+	p.registerPrefix(token.LBRACE, p.parseHashLiteral)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -317,6 +318,39 @@ func (p *Parser) parseArrayLiteral() ast.Expression {
 		Token:    p.curToken,
 		Elements: p.parseExpressionList(token.RBRACKET),
 	}
+}
+
+// parseHashLiteral method of Parser struct
+func (p *Parser) parseHashLiteral() ast.Expression {
+	hash := &ast.HashLiteral{
+		Token: p.curToken,
+		Pairs: make(map[ast.Expression]ast.Expression),
+	}
+	for !p.curTokenIs(token.RBRACE) {
+		// fmt.Println(p.curToken.Literal) // print
+		// key
+		p.nextToken() // go forward
+		// fmt.Println(p.curToken.Literal) // print
+		key := p.parseExpression(LOWEST)
+		if !p.expectPeek(token.COLON) { // go forward
+			return nil
+		}
+
+		// fmt.Println("colon ", p.curToken.Literal) // print
+		// item
+		p.nextToken() // go forward
+		// fmt.Println(p.curToken.Literal) // print
+		item := p.parseExpression(LOWEST)
+		hash.Pairs[key] = item
+		if !p.peekTokenIs(token.RBRACE) && !p.peekTokenIs(token.COMMA) {
+			return nil
+		}
+		p.nextToken()
+	}
+	if !p.curTokenIs(token.RBRACE) { // go forward
+		return nil
+	}
+	return hash
 }
 
 // infix

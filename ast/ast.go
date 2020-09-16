@@ -243,6 +243,33 @@ func (ie *IndexExpression) String() string {
 	return out.String()
 }
 
+// HashLiteral is a struct for token.Hash
+type HashLiteral struct {
+	Token token.Token
+	Pairs map[Expression]Expression
+}
+
+// expressionNode method of HashLiteral struct
+func (hl *HashLiteral) expressionNode() {}
+
+// TokenLiteral method of HashLiteral struct
+func (hl *HashLiteral) TokenLiteral() string {
+	return hl.Token.Literal
+}
+
+// String method of ArrayLiteral struct
+func (hl *HashLiteral) String() string {
+	var out bytes.Buffer
+	pairs := []string{}
+	for key, item := range hl.Pairs {
+		pairs = append(pairs, key.String()+":"+item.String())
+	}
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
+	return out.String()
+}
+
 // prefix expression
 
 // PrefixExpression is a struct
