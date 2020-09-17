@@ -55,6 +55,7 @@ const (
 	ELSE     = "ELSE"
 	RETURN   = "RETURN"
 	FOR      = "FOR"
+	MACRO    = "MACRO"
 
 	STRING = "STRING"
 )
@@ -70,6 +71,7 @@ var keywords = map[string]TokenType{
 	"else":   ELSE,
 	"return": RETURN,
 	"for":    FOR,
+	"macro":  MACRO,
 }
 
 // LookupIdent function identify whether the identifier is keyword or not, and return its token type

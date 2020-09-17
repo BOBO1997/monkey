@@ -457,3 +457,33 @@ func (ce *CallExpression) String() string {
 	out.WriteString(")")
 	return out.String()
 }
+
+// MacroLiteral is a struct
+type MacroLiteral struct {
+	Token      token.Token
+	Parameters []*Identifier
+	Body       *BlockStatement
+}
+
+// expressionNode method of MacroLiteral struct
+func (ml *MacroLiteral) expressionNode() {}
+
+// TokenLiteral method of MacroLiteral struct
+func (ml *MacroLiteral) TokenLiteral() string {
+	return ml.Token.Literal
+}
+
+// String method of MacroLiteral struct
+func (ml *MacroLiteral) String() string {
+	var out bytes.Buffer
+	params := []string{}
+	for _, p := range ml.Parameters {
+		params = append(params, p.String())
+	}
+	out.WriteString(ml.TokenLiteral())
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(")")
+	out.WriteString(ml.Body.String())
+	return out.String()
+}

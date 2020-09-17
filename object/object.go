@@ -25,6 +25,7 @@ const (
 	ARRAY_OBJ        = "ARRAY"
 	HASH_OBJ         = "HASH"
 	QUOTE_OBJ        = "QUOTE"
+	MACRO_OBJ        = "MACRO"
 )
 
 /* ====== object definitions ====== */
@@ -133,8 +134,8 @@ func (err *Error) Type() ObjectType {
 
 // Function struct
 type Function struct {
-	Parameters []*ast.Identifier
-	Body       *ast.BlockStatement
+	Parameters []*ast.Identifier   // ast, not object
+	Body       *ast.BlockStatement // ast, not object
 	Env        *Environment
 }
 
@@ -286,4 +287,31 @@ func (q *Quote) Type() ObjectType {
 // Inspect method of Quote struct
 func (q *Quote) Inspect() string {
 	return "QUOTE(" + q.Node.String() + ")"
+}
+
+// Macro struct
+type Macro struct {
+	Parameters []*ast.Identifier   // ast, not object
+	Body       *ast.BlockStatement // ast, not object
+	Env        *Environment
+}
+
+// Inspect method of Macro struct
+func (m *Macro) Inspect() string {
+	var out bytes.Buffer
+	params := []string{}
+	for _, p := range m.Parameters {
+		params = append(params, p.Value)
+	}
+	out.WriteString("macro(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") {\n")
+	out.WriteString(m.Body.String())
+	out.WriteString("\n}")
+	return out.String()
+}
+
+// Type method of Macro struct
+func (m *Macro) Type() ObjectType {
+	return MACRO_OBJ
 }
